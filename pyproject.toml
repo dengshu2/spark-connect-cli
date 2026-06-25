@@ -35,5 +35,9 @@ spark-connect-cli = "spark_connect_cli.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/spark_connect_cli"]
 
+# Ship SKILL.md inside the package so `scq skill install` can write it out.
+[tool.hatch.build.targets.wheel.force-include]
+"SKILL.md" = "spark_connect_cli/SKILL.md"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

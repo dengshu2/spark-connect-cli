@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 from . import jobs, query
@@ -9,9 +10,12 @@ from .session import DEFAULT_REMOTE
 
 
 def cmd_sync(args) -> None:
-    argv = [args.source, "--to", args.to, "--remote", args.remote, "--mode", args.mode]
+    # The JDBC URL carries the ClickHouse password, so it must NOT land in argv
+    # (argv is persisted in the job registry's meta.json). Pass it to the worker
+    # through the environment instead — submit() copies os.environ to the child.
     if args.ch_jdbc:
-        argv += ["--ch-jdbc", args.ch_jdbc]
+        os.environ["SCQ_CH_JDBC"] = args.ch_jdbc
+    argv = [args.source, "--to", args.to, "--remote", args.remote, "--mode", args.mode]
     if args.target:
         argv += ["--target", args.target]
     if args.where:
@@ -29,6 +33,20 @@ def cmd_sync(args) -> None:
         "message": f"sync of {args.source} -> {args.to} submitted; "
                    f"poll with `scq jobs status {job_id}`",
     }))
+
+
+def cmd_skill_install(args) -> None:
+    """Write the bundled SKILL.md into an agent skills directory (mirrors
+    `chsql skill install`)."""
+    import importlib.resources as ir
+    from pathlib import Path
+    root = Path(args.dir or os.environ.get("SKILLS_DIR")
+                or (Path.home() / ".agents" / "skills"))
+    dest = root / "spark-connect-cli"
+    dest.mkdir(parents=True, exist_ok=True)
+    content = ir.files("spark_connect_cli").joinpath("SKILL.md").read_text()
+    (dest / "SKILL.md").write_text(content)
+    print(json.dumps({"installed": str(dest / "SKILL.md")}))
 
 
 def build_parser():
@@ -71,6 +89,12 @@ def build_parser():
     ps.add_argument("--batchsize", type=int, default=None)
     ps.add_argument("--num-partitions", type=int, default=None)
     ps.set_defaults(func=cmd_sync)
+
+    psk = sub.add_parser("skill", help="Manage the agent skill")
+    sksub = psk.add_subparsers(dest="skcmd", required=True)
+    ski = sksub.add_parser("install", help="Write SKILL.md into the skills dir")
+    ski.add_argument("--dir", default=None, help="Skills dir (or $SKILLS_DIR)")
+    ski.set_defaults(func=cmd_skill_install)
 
     pj = sub.add_parser("jobs", help="Manage async jobs")
     js = pj.add_subparsers(dest="jcmd", required=True)
