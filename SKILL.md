@@ -71,10 +71,25 @@ Etiquette:
 When the user says "同步 X 表到 ClickHouse":
 
 1. `scq describe <src>` — get the Hive schema.
-2. Map types (table below) and make sure the ClickHouse target exists (create it
-   with the `chsql` skill if you have it).
-3. `scq sync <src> --to clickhouse [--target <ch_table>] [--where ...]` — submit.
-4. Hand back the job id. Verify with row counts when it finishes.
+2. Decide the **target database and table**. `--target` takes `db.table`:
+   - If the user names a database (e.g. `class_db`), pass it **qualified**:
+     `--target class_db.class`. A **bare table name lands in the connection's
+     default database** (`default`) — don't let data silently go there.
+   - The **database must already exist** (auto-create makes the table, not the
+     database). Ensure it first: `chsql query --allow-ddl "CREATE DATABASE IF NOT
+     EXISTS class_db"`.
+3. Make sure the target table is good:
+   - For a quick/one-off sync, let `scq sync` auto-create it — but pass
+     `--order-by <key>` so it gets a real sort key (otherwise it is created with
+     `ORDER BY tuple()`, no primary index).
+   - For a production table, **pre-create it** with `chsql query --allow-ddl
+     "CREATE TABLE class_db.class (...) ENGINE = MergeTree ORDER BY (...)"` (full
+     control over engine, keys, partitioning), then sync.
+4. Submit: `scq sync <src> --target db.table [--order-by key] [--where ...]`.
+5. Hand back the job id. Verify with row counts when it finishes.
+
+The ClickHouse JDBC connection (`$SCQ_CH_JDBC`) is preconfigured — you do **not**
+pass credentials; just choose the `db.table` with `--target`.
 
 ### Spark/Hive → ClickHouse type mapping
 

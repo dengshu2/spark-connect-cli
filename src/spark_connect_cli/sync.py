@@ -62,6 +62,11 @@ def _parse(argv: list[str]):
     p.add_argument("--batchsize", type=int, default=DEFAULT_BATCHSIZE)
     p.add_argument("--num-partitions", type=int, default=DEFAULT_NUM_PARTITIONS)
     p.add_argument("--auto-threshold", type=int, default=AUTO_THRESHOLD)
+    # Auto-create control: when the target table doesn't exist, Spark creates it.
+    # Without an explicit sort key ClickHouse defaults to ORDER BY tuple() (no
+    # primary index). --order-by injects a real key via createTableOptions.
+    p.add_argument("--order-by", default=None, help="ORDER BY key(s) for auto-created table, e.g. 'id' or 'id,dt'")
+    p.add_argument("--engine", default="MergeTree", help="Engine for auto-created table (default MergeTree)")
     return p.parse_args(argv)
 
 
@@ -82,11 +87,15 @@ def run(argv: list[str], meta: dict) -> int:
           + ", ".join(f"{c}:{t}->{map_type(t)}" for c, t in cols), flush=True)
 
     src_count = spark.sql(f"SELECT count(*) c FROM {a.source}").collect()[0]["c"]
+    # Target may be `db.table` (explicit database) or a bare table name (lands in
+    # the JDBC connection's default database). Keep the landing spot explicit.
     target = a.target or a.source.split(".")[-1]
+    qualified = "." in target
     meta["source_rows"] = src_count
     meta["target"] = target
     write_meta(meta["id"], meta)
-    print(f"[scq] source rows: {src_count} -> target {target}", flush=True)
+    hint = "" if qualified else "  (connection default database; pass --target db.table to choose one)"
+    print(f"[scq] source rows: {src_count} -> target {target}{hint}", flush=True)
 
     # 2. build the read
     sel = f"SELECT * FROM {a.source}"
@@ -110,14 +119,23 @@ def run(argv: list[str], meta: dict) -> int:
 
     # 4. Spark direct write to ClickHouse. Rows are written by the executors;
     # nothing flows through this process.
+    writer = (df.write.format("jdbc")
+              .option("url", a.ch_jdbc)
+              .option("dbtable", target)
+              .option("driver", "com.clickhouse.jdbc.ClickHouseDriver")
+              .option("batchsize", a.batchsize)
+              .option("isolationLevel", "NONE"))  # ClickHouse has no txns
+    # createTableOptions only affects auto-create (when the table is missing); it
+    # is ignored when the table already exists.
+    if a.order_by:
+        writer = writer.option("createTableOptions",
+                               f"ENGINE = {a.engine} ORDER BY ({a.order_by})")
+        print(f"[scq] auto-create (if needed): ENGINE = {a.engine} ORDER BY ({a.order_by})", flush=True)
+    else:
+        print("[scq] note: an auto-created target uses ORDER BY tuple() (no sort key) — "
+              "pass --order-by for a real key, or pre-create the table", flush=True)
     try:
-        (df.write.format("jdbc")
-           .option("url", a.ch_jdbc)
-           .option("dbtable", target)
-           .option("driver", "com.clickhouse.jdbc.ClickHouseDriver")
-           .option("batchsize", a.batchsize)
-           .option("isolationLevel", "NONE")  # ClickHouse has no txns
-           .mode("append").save())
+        writer.mode("append").save()
     except Exception as e:  # noqa: BLE001
         print(f"[scq] JDBC write failed: {e}", flush=True)
         return 1

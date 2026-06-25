@@ -26,6 +26,10 @@ def cmd_sync(args) -> None:
         argv += ["--batchsize", str(args.batchsize)]
     if args.num_partitions:
         argv += ["--num-partitions", str(args.num_partitions)]
+    if args.order_by:
+        argv += ["--order-by", args.order_by]
+    if args.engine:
+        argv += ["--engine", args.engine]
     job_id = jobs.submit("sync", argv,
                          {"source": args.source, "target": args.target or "", "to": args.to})
     print(json.dumps({
@@ -83,11 +87,13 @@ def build_parser():
     ps.add_argument("--to", default="clickhouse")
     ps.add_argument("--mode", choices=["auto", "parallel", "single"], default="auto")
     ps.add_argument("--ch-jdbc", default=None, help="ClickHouse JDBC URL (or $SCQ_CH_JDBC)")
-    ps.add_argument("--target", default=None, help="ClickHouse target table")
+    ps.add_argument("--target", default=None, help="ClickHouse target as db.table (or bare table = default db)")
     ps.add_argument("--where", default=None)
     ps.add_argument("--limit", type=int, default=0)
     ps.add_argument("--batchsize", type=int, default=None)
     ps.add_argument("--num-partitions", type=int, default=None)
+    ps.add_argument("--order-by", default=None, help="ORDER BY key for an auto-created table, e.g. 'id'")
+    ps.add_argument("--engine", default=None, help="Engine for an auto-created table (default MergeTree)")
     ps.set_defaults(func=cmd_sync)
 
     psk = sub.add_parser("skill", help="Manage the agent skill")
