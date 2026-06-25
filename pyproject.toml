@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spark-connect-cli"
+version = "0.1.0"
+description = "Agent-friendly Spark Connect CLI: read-only querying + async long-job control. No JVM, no Kerberos on the client."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "dengshu" }]
+keywords = ["spark", "spark-connect", "cli", "hive", "clickhouse", "llm", "agent"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Database :: Front-Ends",
+    "Environment :: Console",
+]
+dependencies = [
+    "pyspark[connect]>=3.5,<4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/dengshu2/spark-connect-cli"
+Issues = "https://github.com/dengshu2/spark-connect-cli/issues"
+
+[project.scripts]
+scq = "spark_connect_cli.cli:main"
+spark-connect-cli = "spark_connect_cli.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spark_connect_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
