@@ -18,6 +18,10 @@ def cmd_sync(args) -> None:
         argv += ["--where", args.where]
     if args.limit:
         argv += ["--limit", str(args.limit)]
+    if args.batchsize:
+        argv += ["--batchsize", str(args.batchsize)]
+    if args.num_partitions:
+        argv += ["--num-partitions", str(args.num_partitions)]
     job_id = jobs.submit("sync", argv,
                          {"source": args.source, "target": args.target or "", "to": args.to})
     print(json.dumps({
@@ -59,11 +63,13 @@ def build_parser():
     ps = sub.add_parser("sync", help="Submit an async Hive->ClickHouse sync (returns a job id)")
     ps.add_argument("source", help="Hive table, e.g. db.table")
     ps.add_argument("--to", default="clickhouse")
-    ps.add_argument("--mode", choices=["auto", "spark", "pipe"], default="auto")
-    ps.add_argument("--ch-jdbc", default=None)
+    ps.add_argument("--mode", choices=["auto", "parallel", "single"], default="auto")
+    ps.add_argument("--ch-jdbc", default=None, help="ClickHouse JDBC URL (or $SCQ_CH_JDBC)")
     ps.add_argument("--target", default=None, help="ClickHouse target table")
     ps.add_argument("--where", default=None)
     ps.add_argument("--limit", type=int, default=0)
+    ps.add_argument("--batchsize", type=int, default=None)
+    ps.add_argument("--num-partitions", type=int, default=None)
     ps.set_defaults(func=cmd_sync)
 
     pj = sub.add_parser("jobs", help="Manage async jobs")

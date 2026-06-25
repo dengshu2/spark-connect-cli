@@ -77,14 +77,21 @@ status read, so status never lies.
 
 ## Hive → ClickHouse sync
 
-`scq sync` is one job kind built on the async subsystem. Two data paths:
+`scq sync` is one job kind built on the async subsystem. It uses **Spark direct
+write**: a Spark Connect job reads the Hive table and writes to ClickHouse over
+JDBC. The write runs on the executors, so rows never pass through this process or
+the agent.
 
-- **A — Spark direct write (default):** a Spark Connect job reads the Hive table
-  and writes to ClickHouse over JDBC. Distributed; data never passes through this
-  process. Needs `clickhouse-jdbc` on the Spark Connect server classpath and
-  cluster→ClickHouse egress. Configure with `--ch-jdbc` / `$SCQ_CH_JDBC`.
-- **B — pipe fallback (small tables):** rows are collected here and inserted via
-  a ClickHouse client.
+Modes control write parallelism — `single` (one connection, small tables),
+`parallel` (N partitions, large tables), `auto` (picks by row count).
+
+Requires:
+- `clickhouse-jdbc` on the Spark Connect server classpath (`/opt/spark/jars/`),
+- cluster→ClickHouse network egress,
+- a JDBC URL with credentials via `--ch-jdbc` / `$SCQ_CH_JDBC`,
+- the **target ClickHouse table created beforehand** with a suitable engine
+  (Spark `append` won't build a usable MergeTree table for you — create it first,
+  e.g. with the `chsql` skill).
 
 ## Configuration
 
