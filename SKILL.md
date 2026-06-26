@@ -129,6 +129,10 @@ scq exec jobs
 scq exec stages/<id>/<attempt>/taskSummary?quantiles=0.5,0.95,1.0
 ```
 
+- **`executors` memory**: `maxMemory` / `memoryUsed` are the **storage/cache
+  pool** (roughly `(heap − 300MB) × 0.6`), **not** the executor's total memory.
+  A ~100MB `maxMemory` does **not** mean a tiny executor — total heap is set by
+  `spark.executor.memory`. Don't report the cache pool as the executor size.
 - **Data skew**: pull a stage's `taskSummary` and compare a metric's **max vs
   median** (`executorRunTime`, `shuffleReadBytes`, `shuffleReadRecords`). A large
   `max/median` ratio = a straggler / skewed partition. `…?details=true` on a
