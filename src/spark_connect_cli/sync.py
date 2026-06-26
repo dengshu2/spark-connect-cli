@@ -41,6 +41,14 @@ DEFAULT_BATCHSIZE = int(os.environ.get("SCQ_BATCHSIZE", "100000"))
 DEFAULT_NUM_PARTITIONS = int(os.environ.get("SCQ_NUM_PARTITIONS", "8"))
 
 
+def _redact(text: str) -> str:
+    """Mask credentials before anything reaches the job log (a JDBC driver often
+    echoes the full connection URL — password and all — in its exceptions)."""
+    text = re.sub(r"(?i)(password=)[^&\s;}'\"]+", r"\1***", text)
+    text = re.sub(r"(://[^:/@\s]+:)[^@/\s]+(@)", r"\1***\2", text)  # user:pass@host
+    return text
+
+
 def map_type(spark_type: str) -> str:
     t = spark_type.lower().strip()
     if t.startswith("decimal"):
@@ -137,7 +145,7 @@ def run(argv: list[str], meta: dict) -> int:
     try:
         writer.mode("append").save()
     except Exception as e:  # noqa: BLE001
-        print(f"[scq] JDBC write failed: {e}", flush=True)
+        print(f"[scq] JDBC write failed: {_redact(str(e))}", flush=True)
         return 1
 
     print(f"[scq] done: wrote {src_count} rows to {target}", flush=True)

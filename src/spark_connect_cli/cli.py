@@ -39,16 +39,36 @@ def cmd_sync(args) -> None:
     }))
 
 
+def _load_skill_md():
+    """Read the bundled SKILL.md. It is force-included into the wheel under the
+    package, but in an editable install (`pip install -e .`) it only exists at
+    the repo root — fall back to that so the documented dev path doesn't crash."""
+    import importlib.resources as ir
+    from pathlib import Path
+    try:
+        return ir.files("spark_connect_cli").joinpath("SKILL.md").read_text()
+    except (FileNotFoundError, ModuleNotFoundError, OSError):
+        pass
+    repo_root = Path(__file__).resolve().parents[2] / "SKILL.md"
+    if repo_root.exists():
+        return repo_root.read_text()
+    return None
+
+
 def cmd_skill_install(args) -> None:
     """Write the bundled SKILL.md into an agent skills directory (mirrors
     `chsql skill install`)."""
-    import importlib.resources as ir
     from pathlib import Path
+    content = _load_skill_md()
+    if content is None:
+        print(json.dumps({"error": "SKILL.md not found in the package or repo "
+                                    "root; reinstall the package", "code": 1}),
+              file=sys.stderr)
+        sys.exit(1)
     root = Path(args.dir or os.environ.get("SKILLS_DIR")
                 or (Path.home() / ".agents" / "skills"))
     dest = root / "spark-connect-cli"
     dest.mkdir(parents=True, exist_ok=True)
-    content = ir.files("spark_connect_cli").joinpath("SKILL.md").read_text()
     (dest / "SKILL.md").write_text(content)
     print(json.dumps({"installed": str(dest / "SKILL.md")}))
 
