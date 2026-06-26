@@ -108,6 +108,13 @@ scq exec stages/<id>/<attempt>/taskSummary?quantiles=0.5,0.95,1.0   # skew: max/
 `scq exec` auto-discovers the running Spark app via the YARN ResourceManager and
 proxies its monitoring REST API (GET-only). Set the RM base with `$SCQ_YARN_RM`.
 
+**Reading `scq exec executors`** — the `maxMemory` field is Spark's
+**storage/cache pool** (`(heap − 300 MB reserved) × 0.6`), *not* the executor's
+total memory: a 512 MB executor reports ~93 MB, a 1536 MB driver ~741 MB. The
+real heap is `spark.executor.memory` (+ off-heap overhead). The `driver` row has
+0 cores and runs no tasks. With dynamic allocation, idle executors are released —
+so the list may show only the driver when nothing is running.
+
 ## Configuration
 
 | env | default | meaning |
