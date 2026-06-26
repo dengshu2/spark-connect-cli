@@ -131,6 +131,14 @@ so the list may show only the driver when nothing is running.
 etiquette, type-mapping table). Drop it into your agent's skills directory and
 the agent drives `scq` through a shell/Bash tool.
 
+## Roadmap
+
+- Clarify in `SKILL.md` that `scq exec executors` `maxMemory` is the storage
+  pool, not total memory (already noted above).
+- `scq cluster` — optional read-only passthrough to the YARN ResourceManager
+  REST (apps / queues / nodes), rounding out the introspection plane.
+- Vendored/offline install path (bundle wheels) for air-gapped deployments.
+
 ## License
 
 MIT
