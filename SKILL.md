@@ -106,6 +106,36 @@ pass credentials; just choose the `db.table` with `--target`.
 Nullable columns map to `Nullable(T)`. Nested/complex types default to `String`
 (JSON) — confirm with the user before relying on them.
 
+## Metadata & execution introspection
+
+Two general primitives — don't hand-stitch many queries.
+
+**Table metadata → `scq meta db.table`** — one JSON: schema (+ ClickHouse type
+mapping), created time, owner, format, HDFS location, partition columns +
+partition list/count, file count/total size, and min/max file modification time
+(i.e. "when did the data arrive"). Add `--count` for an exact row count (runs a
+`count(*)`, so only when asked). For ad-hoc bits you can still use
+`scq query "DESCRIBE EXTENDED t"` / `"SHOW PARTITIONS t"`.
+
+**Execution metadata → `scq exec <path>`** — read-only passthrough to the Spark
+REST API (auto-discovers the app, GET-only). The model reads the JSON, so any
+runtime question is the same command with a different path:
+
+```bash
+scq exec stages?status=active          # what's running now
+scq exec sql                           # each query's plan + metrics
+scq exec executors                     # cores / memory / GC / shuffle
+scq exec jobs
+scq exec stages/<id>/<attempt>/taskSummary?quantiles=0.5,0.95,1.0
+```
+
+- **Data skew**: pull a stage's `taskSummary` and compare a metric's **max vs
+  median** (`executorRunTime`, `shuffleReadBytes`, `shuffleReadRecords`). A large
+  `max/median` ratio = a straggler / skewed partition. `…?details=true` on a
+  stage lists every task to find the hot one.
+- Stage/job lists can be long — filter (`?status=active`) or fetch one id.
+- For the *plan before running*, use `scq query "EXPLAIN FORMATTED SELECT ..."`.
+
 ## Connection
 
 `scq --remote sc://host:15002 ...` or set `$SPARK_REMOTE`. No Kerberos or JVM is

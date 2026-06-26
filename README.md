@@ -93,6 +93,21 @@ Requires:
   (Spark `append` won't build a usable MergeTree table for you — create it first,
   e.g. with the `chsql` skill).
 
+## Introspection
+
+```bash
+scq meta db.table            # one JSON: schema, created time, location,
+                             # partitions, file count/size, mtime range
+scq meta db.table --count    # also run an exact count(*)
+
+scq exec stages?status=active            # read-only Spark REST passthrough
+scq exec executors
+scq exec stages/<id>/<attempt>/taskSummary?quantiles=0.5,0.95,1.0   # skew: max/median
+```
+
+`scq exec` auto-discovers the running Spark app via the YARN ResourceManager and
+proxies its monitoring REST API (GET-only). Set the RM base with `$SCQ_YARN_RM`.
+
 ## Configuration
 
 | env | default | meaning |
@@ -101,6 +116,7 @@ Requires:
 | `SCQ_JOBS_DIR` | `~/.spark-connect-cli/jobs` | job registry (put on a persistent volume) |
 | `SCQ_MAX_ROWS` | `10000` | default row cap for `query` |
 | `SCQ_CH_JDBC` | — | ClickHouse JDBC URL for `sync` path A |
+| `SCQ_YARN_RM` | `http://namenode.hive-net:8088` | YARN RM base for `scq exec` |
 
 ## Use with an LLM agent
 

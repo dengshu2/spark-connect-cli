@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import jobs, query
+from . import jobs, meta, query, rest
 from .session import DEFAULT_REMOTE
 
 
@@ -95,6 +95,18 @@ def build_parser():
     ps.add_argument("--order-by", default=None, help="ORDER BY key for an auto-created table, e.g. 'id'")
     ps.add_argument("--engine", default=None, help="Engine for an auto-created table (default MergeTree)")
     ps.set_defaults(func=cmd_sync)
+
+    pm = sub.add_parser("meta", help="One JSON bundle of a table's metadata")
+    pm.add_argument("table", help="db.table")
+    pm.add_argument("--count", action="store_true", help="include exact row count (runs count(*))")
+    pm.set_defaults(func=meta.cmd_meta)
+
+    pe = sub.add_parser("exec", help="Read-only Spark execution metadata (REST API passthrough)")
+    pe.add_argument("path", nargs="?", default="",
+                    help="REST subpath, e.g. 'stages' or 'stages/61/0/taskSummary?quantiles=0.5,0.95,1.0'")
+    pe.add_argument("--rm", default=None, help="YARN RM base URL (or $SCQ_YARN_RM)")
+    pe.add_argument("--compact", action="store_true", help="compact JSON output")
+    pe.set_defaults(func=rest.cmd_exec)
 
     psk = sub.add_parser("skill", help="Manage the agent skill")
     sksub = psk.add_subparsers(dest="skcmd", required=True)
