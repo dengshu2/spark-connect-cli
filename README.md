@@ -122,6 +122,7 @@ so the list may show only the driver when nothing is running.
 | `SPARK_REMOTE` | `sc://localhost:15002` | Spark Connect endpoint |
 | `SCQ_JOBS_DIR` | `~/.spark-connect-cli/jobs` | job registry (put on a persistent volume) |
 | `SCQ_MAX_ROWS` | `10000` | default row cap for `query` |
+| `SCQ_CONNECT_TIMEOUT` | `10` | seconds to wait for the endpoint's TCP socket before failing with exit `2` (keeps a dead endpoint from hanging the caller) |
 | `SCQ_CH_JDBC` | — | ClickHouse JDBC URL for `sync` path A |
 | `SCQ_YARN_RM` | `http://namenode.hive-net:8088` | YARN RM base for `scq exec` |
 

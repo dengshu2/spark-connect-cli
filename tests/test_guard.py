@@ -13,3 +13,18 @@ def test_writes_blocked():
                 "UPDATE t SET x=1", "CREATE TABLE t (a int)", "TRUNCATE TABLE t",
                 "ALTER TABLE t ADD COLUMN c int", "MERGE INTO t ..."]:
         assert not is_read_only(sql), sql
+
+
+def test_cte_prefixed_write_is_blocked():
+    # A CTE can prefix a write; the WITH leader must not whitelist it.
+    for sql in ["WITH x AS (SELECT 1) INSERT INTO t SELECT * FROM x",
+                "with s as (select * from a) delete from t where id in (select * from s)",
+                "WITH s AS (SELECT 1) MERGE INTO t USING s ON t.id=s.id"]:
+        assert not is_read_only(sql), sql
+
+
+def test_leading_comment_does_not_block_a_read():
+    for sql in ["-- a note\nSELECT 1",
+                "/* block */ SELECT 1",
+                "-- one\n-- two\nselect * from t"]:
+        assert is_read_only(sql), sql
