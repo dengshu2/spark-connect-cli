@@ -97,7 +97,7 @@ def get_spark(remote: str):
     try:
         from pyspark.sql import SparkSession
     except ModuleNotFoundError:
-        err("pyspark is not installed; `pip install 'pyspark[connect]>=3.5,<4'`", EXIT_CONN_ERR)
+        err("pyspark is not installed; `pip install 'pyspark[connect]>=4.1,<4.2'`", EXIT_CONN_ERR)
     _preflight(remote, DEFAULT_CONNECT_TIMEOUT)
     try:
         return SparkSession.builder.remote(remote).getOrCreate()

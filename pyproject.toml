@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "spark-connect-cli"
-version = "0.2.2"
+version = "0.3.0"
 description = "Agent-friendly Spark Connect CLI: read-only querying + async long-job control. No JVM, no Kerberos on the client."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "dengshu" }]
 keywords = ["spark", "spark-connect", "cli", "hive", "clickhouse", "llm", "agent"]
@@ -18,7 +18,10 @@ classifiers = [
     "Environment :: Console",
 ]
 dependencies = [
-    "pyspark[connect]>=3.5,<4",
+    # Match the spark-hive-dock Spark Connect server (4.1.x). The Connect
+    # protocol expects client and server on the same minor; 4.1.x patch skew is
+    # fine (as 3.5.x was). Server upgraded 2026-06-30 from 3.5.3 to 4.1.2.
+    "pyspark[connect]>=4.1,<4.2",
 ]
 
 [project.optional-dependencies]
